@@ -1,6 +1,8 @@
 package com.driver;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 
 import org.springframework.stereotype.Repository;
 
@@ -20,8 +22,9 @@ public class SpotifyRepository {
     public List<Album> albums;
     public List<Artist> artists;
 
-    public SpotifyRepository(){
-        //To avoid hitting apis multiple times, initialize all the hashmaps here with some dummy data
+    public SpotifyRepository() {
+        // To avoid hitting apis multiple times, initialize all the hashmaps here with
+        // some dummy data
         artistAlbumMap = new HashMap<>();
         albumSongMap = new HashMap<>();
         playlistSongMap = new HashMap<>();
@@ -38,36 +41,45 @@ public class SpotifyRepository {
     }
 
     public User createUser(String name, String mobile) {
+        User user = new User();
+        user.setName(name);
+        user.setMobile(mobile);
+
+        return user;
     }
 
-    public Artist createArtist(String name) {
-    }
+    // public Artist createArtist(String name) {
+    // }
 
-    public Album createAlbum(String title, String artistName) {
-    }
+    // public Album createAlbum(String title, String artistName) {
+    // }
 
-    public Song createSong(String title, String albumName, int length) throws Exception{
-    }
+    // public Song createSong(String title, String albumName, int length) throws
+    // Exception {
+    // }
 
-    public Playlist createPlaylistOnLength(String mobile, String title, int length) throws Exception {
+    // public Playlist createPlaylistOnLength(String mobile, String title, int
+    // length) throws Exception {
 
-    }
+    // }
 
-    public Playlist createPlaylistOnName(String mobile, String title, List<String> songTitles) throws Exception {
+    // public Playlist createPlaylistOnName(String mobile, String title,
+    // List<String> songTitles) throws Exception {
 
-    }
+    // }
 
-    public Playlist findPlaylist(String mobile, String playlistTitle) throws Exception {
+    // public Playlist findPlaylist(String mobile, String playlistTitle) throws
+    // Exception {
 
-    }
+    // }
 
-    public Song likeSong(String mobile, String songTitle) throws Exception {
+    // public Song likeSong(String mobile, String songTitle) throws Exception {
 
-    }
+    // }
 
-    public String mostPopularArtist() {
-    }
+    // public String mostPopularArtist() {
+    // }
 
-    public String mostPopularSong() {
-    }
+    // public String mostPopularSong() {
+    // }
 }
