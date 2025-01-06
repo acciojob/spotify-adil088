@@ -96,60 +96,99 @@ public class SpotifyRepository {
 
     public Playlist createPlaylistOnLength(String mobile, String title, int length) throws Exception {
 
+        // Ensure that users and songs lists are not null
+        if (users == null || songs == null) {
+            throw new Exception("Users or Songs list is not initialized.");
+        }
+
+        User currentUser = null;
         for (User user : users) {
             if (user.getMobile().equalsIgnoreCase(mobile)) {
-                Playlist playlist = new Playlist();
-                playlist.setTitle(title);
-
-                List<Song> filteredSongs = new ArrayList<>();
-                for (Song song : songs) {
-                    if (song.getLength() == length) {
-                        filteredSongs.add(song);
-                    }
-                }
-                playlists.add(playlist);
-                playlistSongMap.computeIfAbsent(playlist, k -> new ArrayList<>()).addAll(filteredSongs);
-                return playlist;
+                currentUser = user; // Found the user with the given mobile number
+                break;
             }
         }
 
-        throw new Exception("User not found for mobile: " + mobile);
+        if (currentUser == null) {
+            throw new Exception("User not found for mobile: " + mobile);
+        }
 
+        // Create a new playlist
+        Playlist playlist = new Playlist();
+        playlist.setTitle(title);
+
+        // Filter songs based on the given length
+        List<Song> filteredSongs = new ArrayList<>();
+        for (Song song : songs) {
+            if (song.getLength() == length) {
+                filteredSongs.add(song);
+            }
+        }
+
+        if (filteredSongs.isEmpty()) {
+            throw new Exception("No songs found with the given length: " + length);
+        }
+
+        // Add the playlist to the list of playlists
+        playlists.add(playlist);
+
+        // Map the playlist to the filtered songs
+        playlistSongMap.computeIfAbsent(playlist, k -> new ArrayList<>()).addAll(filteredSongs);
+
+        return playlist;
     }
 
     public Playlist createPlaylistOnName(String mobile, String title,
             List<String> songTitles) throws Exception {
 
+        // Ensure that users and songs lists are not null
+        if (users == null || songs == null) {
+            throw new Exception("Users or Songs list is not initialized.");
+        }
+
+        User currentUser = null;
         for (User user : users) {
             if (user.getMobile().equalsIgnoreCase(mobile)) {
-                Playlist playlist = new Playlist();
-                playlist.setTitle(title);
-
-                List<Song> selectedSongs = new ArrayList<>();
-                for (String songTitle : songTitles) {
-                    boolean songFound = false;
-                    for (Song song : songs) {
-                        if (song.getTitle().equalsIgnoreCase(songTitle)) {
-                            selectedSongs.add(song);
-                            songFound = true;
-                            break;
-                        }
-                    }
-                    if (!songFound) {
-                        throw new Exception();
-                    }
-                }
-                playlists.add(playlist);
-                playlistSongMap.computeIfAbsent(playlist, k -> new ArrayList<>()).addAll(selectedSongs);
-                playlistListenerMap.computeIfAbsent(playlist, k -> new ArrayList<>()).add(user);
-                creatorPlaylistMap.put(user, playlist);
-                userPlaylistMap.computeIfAbsent(user, k -> new ArrayList<>()).add(playlist);
-
-                return playlist;
+                currentUser = user; // Found the user with the given mobile number
+                break;
             }
         }
-        throw new Exception();
 
+        if (currentUser == null) {
+            throw new Exception("User not found for mobile: " + mobile);
+        }
+
+        // Create a new playlist
+        Playlist playlist = new Playlist();
+        playlist.setTitle(title);
+
+        List<Song> selectedSongs = new ArrayList<>();
+        for (String songTitle : songTitles) {
+            boolean songFound = false;
+            for (Song song : songs) {
+                if (song.getTitle().equalsIgnoreCase(songTitle)) {
+                    selectedSongs.add(song);
+                    songFound = true;
+                    break;
+                }
+            }
+            if (!songFound) {
+                throw new Exception("Song with title '" + songTitle + "' not found.");
+            }
+        }
+
+        // Add the playlist to the playlists list
+        playlists.add(playlist);
+
+        // Map the playlist to the selected songs
+        playlistSongMap.computeIfAbsent(playlist, k -> new ArrayList<>()).addAll(selectedSongs);
+
+        // Map the playlist to the user (creator) and the listeners
+        playlistListenerMap.computeIfAbsent(playlist, k -> new ArrayList<>()).add(currentUser);
+        creatorPlaylistMap.put(currentUser, playlist);
+        userPlaylistMap.computeIfAbsent(currentUser, k -> new ArrayList<>()).add(playlist);
+
+        return playlist;
     }
 
     public Playlist findPlaylist(String mobile, String playlistTitle) throws Exception {
@@ -185,14 +224,14 @@ public class SpotifyRepository {
             throw new Exception("Playlist with title " + playlistTitle + " not found.");
         }
 
-        // Check if the user is the creator or a listener
-        boolean isListener = false;
-        boolean isCreator = false;
-
-        // Ensure playlistListenerMap is initialized
+        // Ensure that playlistListenerMap is initialized
         if (playlistListenerMap == null) {
             playlistListenerMap = new HashMap<>();
         }
+
+        // Check if the user is the creator or a listener
+        boolean isListener = false;
+        boolean isCreator = false;
 
         // Check if the user is a listener
         List<User> listeners = playlistListenerMap.get(foundPlaylist);
@@ -217,56 +256,87 @@ public class SpotifyRepository {
     public Song likeSong(String mobile, String songTitle) throws Exception {
 
         Song foundSong = null;
+
+        // Ensure songs list is not null
+        if (songs == null) {
+            throw new NullPointerException("Songs list is not initialized!");
+        }
+
+        // Find the song by title
         for (Song song : songs) {
             if (song.getTitle().equalsIgnoreCase(songTitle)) {
                 foundSong = song;
-                break;
+                break; // Stop once the song is found
             }
         }
+
         if (foundSong == null) {
-            throw new Exception("Song not found!");
+            throw new Exception("Song with title " + songTitle + " not found!");
         }
 
         User foundUser = null;
+
+        // Ensure users list is not null
+        if (users == null) {
+            throw new NullPointerException("Users list is not initialized!");
+        }
+
+        // Find the user by mobile number
         for (User user : users) {
             if (user.getMobile().equalsIgnoreCase(mobile)) {
                 foundUser = user;
-                break;
+                break; // Stop once the user is found
             }
         }
+
         if (foundUser == null) {
-            throw new Exception("User not found!");
+            throw new Exception("User with mobile " + mobile + " not found!");
         }
 
-        // check if user already liked the song
+        // Check if user already liked the song
         List<User> songLikers = songLikeMap.computeIfAbsent(foundSong, k -> new ArrayList<>());
         if (songLikers.contains(foundUser)) {
-            throw new Exception();
+            throw new Exception("User has already liked this song!");
         }
+
+        // Add user to the likers list and increment the song's like count
         songLikers.add(foundUser);
         foundSong.setLikes(foundSong.getLikes() + 1);
 
+        // Ensure albumSongMap is initialized
+        if (albumSongMap == null) {
+            albumSongMap = new HashMap<>();
+        }
+
         Album foundAlbum = null;
+
+        // Find the album containing the song
         for (Map.Entry<Album, List<Song>> entry : albumSongMap.entrySet()) {
             List<Song> albumSongs = entry.getValue();
             if (albumSongs.contains(foundSong)) {
                 foundAlbum = entry.getKey();
-                break;
+                break; // Stop once the album is found
             }
         }
 
         if (foundAlbum != null) {
+            // Ensure artistAlbumMap is initialized
+            if (artistAlbumMap == null) {
+                artistAlbumMap = new HashMap<>();
+            }
+
+            // Update the artist's like count if the song's album is associated with an
+            // artist
             for (Map.Entry<Artist, List<Album>> entry : artistAlbumMap.entrySet()) {
                 List<Album> albums = entry.getValue();
                 if (albums.contains(foundAlbum)) {
                     entry.getKey().setLikes(entry.getKey().getLikes() + 1);
-                    break;
+                    break; // Stop once the artist is found
                 }
             }
         }
 
         return foundSong;
-
     }
 
     public String mostPopularArtist() {
