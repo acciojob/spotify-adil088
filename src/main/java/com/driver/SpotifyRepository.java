@@ -113,7 +113,7 @@ public class SpotifyRepository {
             }
         }
 
-        throw new Exception();
+        throw new Exception("User not found for mobile: " + mobile);
 
     }
 
@@ -155,55 +155,62 @@ public class SpotifyRepository {
     public Playlist findPlaylist(String mobile, String playlistTitle) throws Exception {
         Playlist foundPlaylist = null;
         User currentUser = null;
+
+        // Ensure that users and playlists are not null
+        if (users == null || playlists == null) {
+            throw new NullPointerException("Users or playlists are not initialized!");
+        }
+
+        // Find the current user
         for (User user : users) {
             if (user.getMobile().equalsIgnoreCase(mobile)) {
                 currentUser = user;
-                for (Playlist playlist : playlists) {
-                    if (playlist.getTitle().equalsIgnoreCase(playlistTitle)) {
-                        foundPlaylist = playlist;
-                        break;
-                    }
-                }
-
+                break; // Stop once the user is found
             }
         }
 
-        if (foundPlaylist != null) {
-            boolean isListener = false;
-            boolean isCreator = false;
-            for (User user : users) {
-                if (user.getMobile().equalsIgnoreCase(mobile)) {
-                    currentUser = user;
-                    break; // Stop once the user is found
-                }
-            }
-
-            if (currentUser == null) {
-                throw new Exception();
-            }
-
-            for (Playlist playlist : playlists) {
-                if (playlist.getTitle().equalsIgnoreCase(playlistTitle)) {
-                    foundPlaylist = playlist;
-                    break; // Stop once the playlist is found
-                }
-            }
-
-            if (foundPlaylist != null) {
-                // throw new Exception("Playlist not found");
-
-                Playlist creatorPlaylist = creatorPlaylistMap.get(currentUser);
-                isCreator = (creatorPlaylist != null && creatorPlaylist.equals(foundPlaylist));
-
-                List<User> listeners = playlistListenerMap.get(foundPlaylist);
-                isListener = (listeners != null && listeners.contains(currentUser));
-
-                if (!isListener && !isCreator) {
-                    playlistListenerMap.computeIfAbsent(foundPlaylist, k -> new ArrayList<>()).add(currentUser);
-                }
-            }
-
+        if (currentUser == null) {
+            throw new Exception("User with mobile " + mobile + " not found.");
         }
+
+        // Find the playlist
+        for (Playlist playlist : playlists) {
+            if (playlist.getTitle().equalsIgnoreCase(playlistTitle)) {
+                foundPlaylist = playlist;
+                break; // Stop once the playlist is found
+            }
+        }
+
+        if (foundPlaylist == null) {
+            throw new Exception("Playlist with title " + playlistTitle + " not found.");
+        }
+
+        // Check if the user is the creator or a listener
+        boolean isListener = false;
+        boolean isCreator = false;
+
+        // Ensure playlistListenerMap is initialized
+        if (playlistListenerMap == null) {
+            playlistListenerMap = new HashMap<>();
+        }
+
+        // Check if the user is a listener
+        List<User> listeners = playlistListenerMap.get(foundPlaylist);
+        if (listeners != null) {
+            isListener = listeners.contains(currentUser);
+        }
+
+        // Check if the user is the creator
+        Playlist creatorPlaylist = creatorPlaylistMap.get(currentUser);
+        if (creatorPlaylist != null && creatorPlaylist.equals(foundPlaylist)) {
+            isCreator = true;
+        }
+
+        // If the user is neither a listener nor the creator, add them as a listener
+        if (!isListener && !isCreator) {
+            playlistListenerMap.computeIfAbsent(foundPlaylist, k -> new ArrayList<>()).add(currentUser);
+        }
+
         return foundPlaylist;
     }
 
@@ -217,7 +224,7 @@ public class SpotifyRepository {
             }
         }
         if (foundSong == null) {
-            throw new Exception();
+            throw new Exception("Song not found!");
         }
 
         User foundUser = null;
@@ -228,9 +235,10 @@ public class SpotifyRepository {
             }
         }
         if (foundUser == null) {
-            throw new Exception();
+            throw new Exception("User not found!");
         }
 
+        // check if user already liked the song
         List<User> songLikers = songLikeMap.computeIfAbsent(foundSong, k -> new ArrayList<>());
         if (songLikers.contains(foundUser)) {
             throw new Exception();
@@ -240,20 +248,18 @@ public class SpotifyRepository {
 
         Album foundAlbum = null;
         for (Map.Entry<Album, List<Song>> entry : albumSongMap.entrySet()) {
-            Album album = entry.getKey();
             List<Song> albumSongs = entry.getValue();
             if (albumSongs.contains(foundSong)) {
-                foundAlbum = album;
+                foundAlbum = entry.getKey();
                 break;
             }
         }
 
         if (foundAlbum != null) {
             for (Map.Entry<Artist, List<Album>> entry : artistAlbumMap.entrySet()) {
-                Artist artist = entry.getKey();
                 List<Album> albums = entry.getValue();
                 if (albums.contains(foundAlbum)) {
-                    artist.setLikes(artist.getLikes() + 1);
+                    entry.getKey().setLikes(entry.getKey().getLikes() + 1);
                     break;
                 }
             }
@@ -265,7 +271,7 @@ public class SpotifyRepository {
 
     public String mostPopularArtist() {
 
-        String mostPopularArtist = "";
+        String mostPopularArtist = null;
         int maxLikes = 0;
 
         if (artists.isEmpty()) {
@@ -279,16 +285,12 @@ public class SpotifyRepository {
             }
         }
 
-        if (mostPopularArtist.equalsIgnoreCase("")) {
-            return "No artist with likes found!";
-        }
-
-        return mostPopularArtist;
+        return (mostPopularArtist != null) ? mostPopularArtist : "No artist with likes found!";
 
     }
 
     public String mostPopularSong() {
-        String mostPopularSong = "";
+        String mostPopularSong = null;
         int maxLikes = 0;
 
         if (songs.isEmpty()) {
@@ -302,10 +304,6 @@ public class SpotifyRepository {
             }
         }
 
-        if (mostPopularSong.equalsIgnoreCase("")) {
-            return "No song with likes found!";
-        }
-
-        return mostPopularSong;
+        return (mostPopularSong != null) ? mostPopularSong : "No song with likes found!";
     }
 }
