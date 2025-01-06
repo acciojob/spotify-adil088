@@ -24,8 +24,7 @@ public class SpotifyRepository {
     public List<Artist> artists;
 
     public SpotifyRepository() {
-        // To avoid hitting apis multiple times, initialize all the hashmaps here with
-        // some dummy data
+        // Initialize all the hashmaps here
         artistAlbumMap = new HashMap<>();
         albumSongMap = new HashMap<>();
         playlistSongMap = new HashMap<>();
@@ -195,16 +194,11 @@ public class SpotifyRepository {
         Playlist foundPlaylist = null;
         User currentUser = null;
 
-        // Ensure that users and playlists are not null
-        if (users == null || playlists == null) {
-            throw new NullPointerException("Users or playlists are not initialized!");
-        }
-
         // Find the current user
         for (User user : users) {
             if (user.getMobile().equalsIgnoreCase(mobile)) {
                 currentUser = user;
-                break; // Stop once the user is found
+                break;
             }
         }
 
@@ -216,7 +210,7 @@ public class SpotifyRepository {
         for (Playlist playlist : playlists) {
             if (playlist.getTitle().equalsIgnoreCase(playlistTitle)) {
                 foundPlaylist = playlist;
-                break; // Stop once the playlist is found
+                break;
             }
         }
 
@@ -224,30 +218,16 @@ public class SpotifyRepository {
             throw new Exception("Playlist with title " + playlistTitle + " not found.");
         }
 
-        // Ensure that playlistListenerMap is initialized
-        if (playlistListenerMap == null) {
-            playlistListenerMap = new HashMap<>();
-        }
+        // Ensure playlistListenerMap is initialized (already done in constructor)
+        List<User> listeners = playlistListenerMap.computeIfAbsent(foundPlaylist, k -> new ArrayList<>());
 
         // Check if the user is the creator or a listener
-        boolean isListener = false;
-        boolean isCreator = false;
-
-        // Check if the user is a listener
-        List<User> listeners = playlistListenerMap.get(foundPlaylist);
-        if (listeners != null) {
-            isListener = listeners.contains(currentUser);
-        }
-
-        // Check if the user is the creator
-        Playlist creatorPlaylist = creatorPlaylistMap.get(currentUser);
-        if (creatorPlaylist != null && creatorPlaylist.equals(foundPlaylist)) {
-            isCreator = true;
-        }
+        boolean isListener = listeners.contains(currentUser);
+        boolean isCreator = creatorPlaylistMap.get(currentUser) == foundPlaylist;
 
         // If the user is neither a listener nor the creator, add them as a listener
         if (!isListener && !isCreator) {
-            playlistListenerMap.computeIfAbsent(foundPlaylist, k -> new ArrayList<>()).add(currentUser);
+            listeners.add(currentUser);
         }
 
         return foundPlaylist;
@@ -257,81 +237,57 @@ public class SpotifyRepository {
 
         Song foundSong = null;
 
-        // Ensure songs list is not null
-        if (songs == null) {
-            throw new NullPointerException("Songs list is not initialized!");
-        }
-
-        // Find the song by title
+        // Find the song
         for (Song song : songs) {
             if (song.getTitle().equalsIgnoreCase(songTitle)) {
                 foundSong = song;
-                break; // Stop once the song is found
+                break;
             }
         }
-
         if (foundSong == null) {
             throw new Exception("Song with title " + songTitle + " not found!");
         }
 
         User foundUser = null;
 
-        // Ensure users list is not null
-        if (users == null) {
-            throw new NullPointerException("Users list is not initialized!");
-        }
-
-        // Find the user by mobile number
+        // Find the user
         for (User user : users) {
             if (user.getMobile().equalsIgnoreCase(mobile)) {
                 foundUser = user;
-                break; // Stop once the user is found
+                break;
             }
         }
-
         if (foundUser == null) {
             throw new Exception("User with mobile " + mobile + " not found!");
         }
 
-        // Check if user already liked the song
+        // Ensure that user has not already liked the song
         List<User> songLikers = songLikeMap.computeIfAbsent(foundSong, k -> new ArrayList<>());
         if (songLikers.contains(foundUser)) {
-            throw new Exception("User has already liked this song!");
+            // Return the song if already liked (optional: just skip the like)
+            return foundSong;
         }
 
-        // Add user to the likers list and increment the song's like count
+        // Add user to song likers and increase like count
         songLikers.add(foundUser);
         foundSong.setLikes(foundSong.getLikes() + 1);
 
-        // Ensure albumSongMap is initialized
-        if (albumSongMap == null) {
-            albumSongMap = new HashMap<>();
-        }
-
+        // Handle the album and artist's like count increment
         Album foundAlbum = null;
-
-        // Find the album containing the song
         for (Map.Entry<Album, List<Song>> entry : albumSongMap.entrySet()) {
             List<Song> albumSongs = entry.getValue();
             if (albumSongs.contains(foundSong)) {
                 foundAlbum = entry.getKey();
-                break; // Stop once the album is found
+                break;
             }
         }
 
         if (foundAlbum != null) {
-            // Ensure artistAlbumMap is initialized
-            if (artistAlbumMap == null) {
-                artistAlbumMap = new HashMap<>();
-            }
-
-            // Update the artist's like count if the song's album is associated with an
-            // artist
             for (Map.Entry<Artist, List<Album>> entry : artistAlbumMap.entrySet()) {
                 List<Album> albums = entry.getValue();
                 if (albums.contains(foundAlbum)) {
                     entry.getKey().setLikes(entry.getKey().getLikes() + 1);
-                    break; // Stop once the artist is found
+                    break;
                 }
             }
         }
